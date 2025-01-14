@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Menús Semanales</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        header {
+            background: #f38870;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+        }
+        main {
+            padding: 20px;
+        }
+        .form-container, .menu-container {
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #f38870;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #fb7557;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #f38870;
+            color: white;
+        }
+        .lock {
+            display: inline-block;
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .locked {
+            color: #dc3545;
+        }
+        .unlocked {
+            color: #28a745;
+        }
+        .toggle-all {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Generador de Menús Semanales</h1>
+    </header>
+    <main>
+        <section class="menu-container">
+            <h2>Menú Semanal</h2>
+            <button id="toggle-locks" class="toggle-all">Bloquear/Desbloquear Todo</button>
+            <button id="generate-menu">Generar Menú</button>
+            <div id="menu-output"></div>
+        </section>
+        <section class="form-container">
+            <h2>Añadir Alimento</h2>
+            <form id="food-form">
+                <label for="food-name">Nombre del Alimento:</label>
+                <input type="text" id="food-name" name="food-name" required>
+
+                <label for="food-type">Tipo de Alimento:</label>
+                <select id="food-type" name="food-type" required>
+                    <option value="proteina">Proteína</option>
+                    <option value="carbohidrato">Carbohidrato</option>
+                </select>
+
+                <label for="food-quantity">Cantidad (en gramos):</label>
+                <input type="number" id="food-quantity" name="food-quantity" required>
+
+                <button type="submit">Añadir Alimento</button>
+            </form>
+        </section>
+
+    </main>
+
+    <script>
+        const foods = {
+            proteina: [
+            { name: "Pechuga de Pollo", quantity: 120, maxFrequency: 4 },
+            { name: "Pechuga de pavo", quantity: 120, maxFrequency: 4 },
+            { name: "Cinta de lomo adobado", quantity: 100, maxFrequency: 4 },
+            { name: "Solomillo de Cerdo", quantity: 90, maxFrequency: 4 },
+            { name: "Carne picada vacuno - cerdo", quantity: 70, maxFrequency: 3 },
+            { name: "Filete Magro de ternera", quantity: 80, maxFrequency: 4 },
+            { name: "Pescado blanco (merluza, rosada, bacalao, tilapia)", quantity: 130, maxFrequency: 4 },
+            { name: "Salmón", quantity: 70, maxFrequency: 1 },
+            { name: "Atún", quantity: 90, maxFrequency: 1 },
+            { name: "Lata de atún", quantity: 1, maxFrequency: 2 },
+            { name: "Huevos", quantity: 2, maxFrequency: 4 }
+            ],
+            carbohidrato: [
+            {name: "Patata", quantity: 20, maxFrequency: 3 },
+            {name: "Gnocchis", quantity: 80, maxFrequency: 1 },
+            {name: "Pan", quantity: 40, maxFrequency: 3 },
+            {name: "Pasta", quantity: 40, maxFrequency: 3 },
+            {name: "Arroz", quantity: 40, maxFrequency: 3 },
+            {name: "Garbanzos cocidos", quantity: 90, maxFrequency: 2 },
+            {name: "Lentejas cocidas", quantity: 170, maxFrequency: 2 },
+            {name: "Tortitas de arroz", quantity: 5, maxFrequency: 1 },
+            {name: "Batata", quantity: 160, maxFrequency: 2 }
+            ]
+        };
+
+        const foodFrequency = {
+            proteina: {},
+            carbohidrato: {}
+        };
+
+        const lockedMeals = {}; // Tracks locked meals
+
+        document.getElementById("food-form").addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            const name = document.getElementById("food-name").value;
+            const type = document.getElementById("food-type").value;
+            const quantity = parseInt(document.getElementById("food-quantity").value);
+
+            if (foods[type]) {
+                foods[type].push({ name, quantity, maxFrequency: 3 });
+                alert("Alimento añadido correctamente.");
+            }
+
+            this.reset();
+        });
+
+        document.getElementById("generate-menu").addEventListener("click", function () {
+            const menuOutput = document.getElementById("menu-output");
+            menuOutput.innerHTML = "";
+
+            const table = document.createElement("table");
+            const headerRow = document.createElement("tr");
+            headerRow.innerHTML = "<th>Día</th><th>Comida 1</th><th>Comida 2</th>";
+            table.appendChild(headerRow);
+
+            resetFrequency();
+
+            for (let day = 1; day <= 7; day++) {
+                const row = document.createElement("tr");
+
+                const meal1Key = `${day}-1`;
+                const meal2Key = `${day}-2`;
+
+                const meal1 = lockedMeals[meal1Key] || generateMeal();
+                const meal2 = lockedMeals[meal2Key] || generateMeal();
+
+                lockedMeals[meal1Key] = meal1;
+                lockedMeals[meal2Key] = meal2;
+
+                row.innerHTML = `
+                    <td>Día ${day}</td>
+                    <td>${meal1} <span class="lock ${lockedMeals[meal1Key] ? 'locked' : 'unlocked'}" data-key="${meal1Key}">${lockedMeals[meal1Key] ? '&#x1f512;' : '&#x1f513;'}</span></td>
+                    <td>${meal2} <span class="lock ${lockedMeals[meal2Key] ? 'locked' : 'unlocked'}" data-key="${meal2Key}">${lockedMeals[meal2Key] ? '&#x1f512;' : '&#x1f513;'}</span></td>
+                `;
+
+                table.appendChild(row);
+            }
+
+            menuOutput.appendChild(table);
+
+            document.querySelectorAll(".lock").forEach(lock => {
+                lock.addEventListener("click", toggleLock);
+            });
+        });
+
+        document.getElementById("toggle-locks").addEventListener("click", function () {
+            const locks = document.querySelectorAll(".lock");
+            const allLocked = Array.from(locks).every(lock => lock.classList.contains("locked"));
+
+            locks.forEach(lock => {
+                const key = lock.dataset.key;
+
+                if (allLocked) {
+                    delete lockedMeals[key];
+                    lock.classList.remove("locked");
+                    lock.classList.add("unlocked");
+                    lock.innerHTML = "&#x1f513;";
+                } else {
+                    lockedMeals[key] = true;
+                    lock.classList.remove("unlocked");
+                    lock.classList.add("locked");
+                    lock.innerHTML = "&#x1f512;";
+                }
+            });
+        });
+
+        function toggleLock(e) {
+            const lock = e.target;
+            const key = lock.dataset.key;
+
+            if (lock.classList.contains("locked")) {
+                delete lockedMeals[key];
+                lock.classList.remove("locked");
+                lock.classList.add("unlocked");
+                lock.innerHTML = "&#x1f513;";
+            } else {
+                lockedMeals[key] = true;
+                lock.classList.remove("unlocked");
+                lock.classList.add("locked");
+                lock.innerHTML = "&#x1f512;";
+            }
+        }
+
+        function generateMeal() {
+            const protein = getFood("proteina");
+            const carb = getFood("carbohidrato");
+
+            if (!protein || !carb) {
+                return "No hay suficientes alimentos disponibles";
+            }
+
+            return `${protein.name} (${protein.quantity}g) con ${carb.name} (${carb.quantity}g)`;
+        }
+
+        function getFood(type) {
+            const availableFoods = foods[type].filter(food => {
+                const count = foodFrequency[type][food.name] || 0;
+                return count < food.maxFrequency;
+            });
+
+            if (availableFoods.length === 0) {
+                return null;
+            }
+
+            const selectedFood = availableFoods[Math.floor(Math.random() * availableFoods.length)];
+
+            foodFrequency[type][selectedFood.name] = (foodFrequency[type][selectedFood.name] || 0) + 1;
+
+            return selectedFood;
+        }
+
+        function resetFrequency() {
+            for (const type in foodFrequency) {
+                foodFrequency[type] = {};
+            }
+        }
+    </script>
+</body>
+</html>
